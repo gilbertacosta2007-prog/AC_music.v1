@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -79,21 +80,52 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 
 @Composable
 fun ACMusic(vm:MusicViewModel=viewModel()){
- val ctx=androidx.compose.ui.platform.LocalContext.current
- DisposableEffect(Unit){val p=ExoPlayer.Builder(ctx).build();vm.attach(p);onDispose{p.release()}}
+ val ctx=LocalContext.current
+ val permissionName=if(Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+ var permissionGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(ctx,permissionName)==PackageManager.PERMISSION_GRANTED)}
+ val permissionLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
+  permissionGranted=granted
+  if(granted)vm.refreshLocal(ctx)
+ }
+ DisposableEffect(Unit){
+  val p=ExoPlayer.Builder(ctx).build()
+  vm.attach(p)
+  onDispose{p.release()}
+ }
+ LaunchedEffect(permissionGranted){if(permissionGranted)vm.refreshLocal(ctx)}
+ LaunchedEffect(vm.playing){
+  while(true){
+   vm.updateProgress()
+   delay(500)
+  }
+ }
  MaterialTheme(colorScheme=darkColorScheme(primary=vm.accent,background=Color(0xFF080808),surface=Color(0xFF151515))){
   Box(Modifier.fillMaxSize().background(Color(0xFF080808))){
    Column(Modifier.fillMaxSize()){
-    when(vm.tab){Tab.HOME->Home(vm,permissionGranted){permissionLauncher.launch(if(Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE)};Tab.SEARCH->Search(vm);Tab.LIKES->Likes(vm);Tab.PLAYLISTS->Playlists(vm);Tab.SETTINGS->Settings(vm,permissionGranted){permissionLauncher.launch(if(Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE)}}
+    when(vm.tab){
+     Tab.HOME->Home(vm,permissionGranted){permissionLauncher.launch(permissionName)}
+     Tab.SEARCH->Search(vm)
+     Tab.LIKES->Likes(vm)
+     Tab.PLAYLISTS->Playlists(vm)
+     Tab.SETTINGS->Settings(vm,permissionGranted){permissionLauncher.launch(permissionName)}
+    }
     vm.current?.let{Mini(it,vm)}
     NavigationBar(containerColor=Color(0xFF0B0B0B)){
-     Nav(Tab.HOME,"Principal",Icons.Default.Home,vm);Nav(Tab.SEARCH,"Buscar",Icons.Default.Search,vm);Nav(Tab.LIKES,"Me gusta",Icons.Default.Favorite,vm);Nav(Tab.PLAYLISTS,"Playlists",Icons.Default.QueueMusic,vm);Nav(Tab.SETTINGS,"Ajustes",Icons.Default.Settings,vm)}
+     Nav(Tab.HOME,"Principal",Icons.Default.Home,vm)
+     Nav(Tab.SEARCH,"Buscar",Icons.Default.Search,vm)
+     Nav(Tab.LIKES,"Me gusta",Icons.Default.Favorite,vm)
+     Nav(Tab.PLAYLISTS,"Playlists",Icons.Default.QueueMusic,vm)
+     Nav(Tab.SETTINGS,"Ajustes",Icons.Default.Settings,vm)
+    }
    }
    FloatingActionButton({vm.djOpen=true},Modifier.align(Alignment.BottomEnd).padding(18.dp).padding(bottom=70.dp),containerColor=vm.accent){Icon(Icons.Default.Mic,"DJ Flow")}
-   if(vm.playerOpen)Player(vm);if(vm.djOpen)DJ(vm);if(vm.lyricsOpen)Lyrics(vm)
+   if(vm.playerOpen)Player(vm)
+   if(vm.djOpen)DJ(vm)
+   if(vm.lyricsOpen)Lyrics(vm)
   }
  }
 }
+
 @Composable
 fun Nav(
     t: Tab,
