@@ -52,7 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-data class Track(val title:String,val artist:String,val url:String,val isLocal:Boolean=false)
+data class Track(val title:String,val artist:String,val url:String,val isLocal:Boolean=false,val artworkUri:String?=null)
 private val demo=listOf(
  Track("Dreams","AC Music Demo","https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
  Track("Night Drive","AC Music Demo","https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"),
@@ -163,7 +163,7 @@ fun Nav(
 }
 
 @Composable fun Home(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){item{Spacer(Modifier.height(16.dp));Text("AC",color=vm.accent);Text("Music",style=MaterialTheme.typography.displaySmall);Text("Su música. Su ritmo. Su DJ.",color=Color.Gray)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("DJ Flow",style=MaterialTheme.typography.titleLarge);Spacer(Modifier.height(8.dp));Text(vm.djMessage);Spacer(Modifier.height(12.dp));Button({vm.djOpen=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Call,null);Spacer(Modifier.width(8.dp));Text("Hablar con DJ Flow")}}}};item{LocalLibraryCard(vm,permissionGranted,requestPermission)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("YouTube Music",style=MaterialTheme.typography.titleLarge);Text("Busque y reproduzca música desde YouTube Music dentro de AC Music.",color=Color.Gray);Spacer(Modifier.height(12.dp));Button({vm.openYouTubeSearch("")},Modifier.fillMaxWidth()){Icon(Icons.Default.Language,null);Spacer(Modifier.width(8.dp));Text("Abrir YouTube Music")}}}};item{Text("Para usted",style=MaterialTheme.typography.titleLarge)};items(vm.filtered()){TrackRow(it,vm)}}}
-@Composable fun TrackRow(t:Track,vm:MusicViewModel){Row(Modifier.fillMaxWidth().clickable{vm.play(t)}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF242424)),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=vm.accent)};Spacer(Modifier.width(14.dp));Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton({vm.like(t)}){Icon(if(t.title in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=if(t.title in vm.likes)vm.accent else Color.Gray)}}}
+@Composable fun TrackRow(t:Track,vm:MusicViewModel){Row(Modifier.fillMaxWidth().clickable{vm.play(t)}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Artwork(t,56.dp,vm);Spacer(Modifier.width(14.dp));Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton({vm.like(t)}){Icon(if(t.title in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=if(t.title in vm.likes)vm.accent else Color.Gray)}}}
 @Composable fun Search(vm:MusicViewModel){
  Column(Modifier.fillMaxSize().padding(20.dp)){
   Spacer(Modifier.height(20.dp));Text("Buscar",style=MaterialTheme.typography.displaySmall);Text("Teléfono y YouTube Music",color=Color.Gray);Spacer(Modifier.height(12.dp))
@@ -451,5 +451,19 @@ fun YouTubeMusic(vm:MusicViewModel){
     Text("YouTube Music",color=Color.White)
    }
   }
+ }
+}
+
+
+@Composable
+fun Artwork(t:Track,size:androidx.compose.ui.unit.Dp,vm:MusicViewModel){
+ val context=LocalContext.current
+ var bitmap by remember(t.artworkUri){mutableStateOf<android.graphics.Bitmap?>(null)}
+ LaunchedEffect(t.artworkUri){
+  bitmap=t.artworkUri?.let{uri->runCatching{context.contentResolver.openInputStream(Uri.parse(uri)).use{stream->android.graphics.BitmapFactory.decodeStream(stream)}}.getOrNull()}
+ }
+ Box(Modifier.size(size).clip(RoundedCornerShape(24.dp)).background(Color(0xFF242424)),contentAlignment=Alignment.Center){
+  bitmap?.let{androidx.compose.foundation.Image(it.asImageBitmap(),null,Modifier.fillMaxSize())}
+   ?: Icon(Icons.Default.MusicNote,null,modifier=Modifier.size(size*.28f),tint=vm.accent)
  }
 }
