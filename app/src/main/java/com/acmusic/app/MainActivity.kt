@@ -86,7 +86,7 @@ class MusicViewModel:ViewModel(){
  fun toggle(){player?.let{if(it.isPlaying){it.pause();playing=false}else{it.play();playing=true}}}
  fun like(t:Track){likes=if(t.url in likes)likes-t.url else likes+t.url}
  fun askDj(){if(djInput.isBlank())return;val q=djInput.lowercase();val t=when{q.contains("energ")||q.contains("gym")||q.contains("fiesta")->demo[2];q.contains("relax")||q.contains("calma")->demo[0];else->demo.random()};djMessage=if(q.contains("sugarland"))"Oh. Mírame, esto sí está mejor que la música aburrida de Sugarland. Vamos con ${t.title}." else if(t.isLocal) "Oh. Encontré esa canción en su teléfono. Puse ${t.title}. Diablazo." else "Ok. Ese mood está claro. Puse ${t.title}. Diablazo.";play(t);djInput=""}
- fun filtered()=if(search.isBlank())allTracks() else allTracks().filter{it.title.contains(search,true)||it.artist.contains(search,true)}
+ fun filtered():List<Track>{val base=when(searchSource){SearchSource.ALL->allTracks();SearchSource.PHONE->localTracks;SearchSource.YOUTUBE->emptyList()};return if(search.isBlank())base else base.filter{it.title.contains(search,true)||it.artist.contains(search,true)}}
  fun openYouTubeSearch(query:String){val q=query.ifBlank{"música"};youtubeUrl="https://music.youtube.com/search?q="+Uri.encode(q);youtubeOpen=true}
 }
 
