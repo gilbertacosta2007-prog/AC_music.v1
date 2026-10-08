@@ -73,7 +73,7 @@ class MusicViewModel:ViewModel(){
  var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME);var searchSource by mutableStateOf(SearchSource.ALL)
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
  var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
- var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/");var background by mutableStateOf(Color(0xFF080808));var cardColor by mutableStateOf(Color(0xFF151515));var opacity by mutableFloatStateOf(1f);var visualizerStyle by mutableStateOf(VisualizerStyle.CIRCLE);var visualizerIntensity by mutableFloatStateOf(.65f);var visualizerSpeed by mutableFloatStateOf(1f)
+ var wallpaperUri by mutableStateOf<String?>(null);var dynamicWallpaper by mutableStateOf(true);var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/");var background by mutableStateOf(Color(0xFF080808));var cardColor by mutableStateOf(Color(0xFF151515));var opacity by mutableFloatStateOf(1f);var visualizerStyle by mutableStateOf(VisualizerStyle.CIRCLE);var visualizerIntensity by mutableFloatStateOf(.65f);var visualizerSpeed by mutableFloatStateOf(1f)
  fun attach(p:ExoPlayer){player=p;p.repeatMode=repeatMode;p.shuffleModeEnabled=shuffle}
  fun refreshLocal(context:Context){viewModelScope.launch(Dispatchers.IO){localTracks=runCatching{LocalAudioRepository.load(context)}.getOrDefault(emptyList())}}
  fun updateProgress(){player?.let{positionMs=it.currentPosition.coerceAtLeast(0L);durationMs=it.duration.takeIf{d->d>0}?:0L;playing=it.isPlaying}}
@@ -158,6 +158,7 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
  val micPermission=Manifest.permission.RECORD_AUDIO
  var micGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(ctx,micPermission)==PackageManager.PERMISSION_GRANTED)}
  val micLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micGranted=granted}
+ val wallpaperLauncher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null){ctx.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);vm.wallpaperUri=uri.toString();vm.dynamicWallpaper=false}}
  LaunchedEffect(Unit){
   repeat(40){
    PlaybackService.player?.let{vm.attach(it);return@LaunchedEffect}
@@ -173,13 +174,15 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
  }
  MaterialTheme(colorScheme=darkColorScheme(primary=vm.accent,background=vm.background,surface=vm.cardColor)){
   Box(Modifier.fillMaxSize().background(vm.background)){
+   WallpaperLayer(vm)
+
    Column(Modifier.fillMaxSize()){
     when(vm.tab){
      Tab.HOME->Home(vm,permissionGranted){permissionLauncher.launch(permissionName)}
      Tab.SEARCH->Search(vm)
      Tab.LIKES->Likes(vm)
      Tab.PLAYLISTS->Playlists(vm)
-     Tab.SETTINGS->Settings(vm,permissionGranted){permissionLauncher.launch(permissionName)}
+     Tab.SETTINGS->Settings(vm,permissionGranted,{permissionLauncher.launch(permissionName)}){wallpaperLauncher.launch(arrayOf("image/*"))}
     }
     vm.current?.let{Mini(it,vm)}
     NavigationBar(containerColor=Color(0xFF0B0B0B)){
@@ -249,7 +252,7 @@ fun Nav(
 @Composable fun Likes(vm:MusicViewModel){val l=vm.allTracks().filter{it.url in vm.likes};Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Me gusta",style=MaterialTheme.typography.displaySmall);if(l.isEmpty())Text("Todavía no hay canciones guardadas.",color=Color.Gray)else LazyColumn{items(l){TrackRow(it,vm)}}}}
 @Composable fun Playlists(vm:MusicViewModel){Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Playlists",style=MaterialTheme.typography.displaySmall);listOf("Favoritas","Flow nocturno","Entrenamiento").forEach{Card(Modifier.fillMaxWidth().padding(vertical=6.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF151515))){Text(it,Modifier.padding(20.dp))}}}}
 @Composable
-fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit){
+fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit,pickWallpaper:()->Unit){
  val context=LocalContext.current
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{Spacer(Modifier.height(20.dp));Text("Ajustes",style=MaterialTheme.typography.displaySmall);Text("Personalice el reproductor a su gusto.",color=Color.Gray)}
@@ -268,6 +271,8 @@ fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->U
   item{Text("Color de acento")}
   item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFFE53935),Color(0xFF7C4DFF),Color(0xFF00BFA5),Color(0xFFFF9800),Color(0xFF42A5F5)).forEach{c->Box(Modifier.size(38.dp).clip(CircleShape).background(c).clickable{vm.accent=c})}}}
   item{Text("Fondo")}
+  item{SwitchRow("Fondo dinámico","Usar la portada de la canción como fondo",vm.dynamicWallpaper){vm.dynamicWallpaper=it}}
+  item{Button(pickWallpaper,Modifier.fillMaxWidth()){Icon(Icons.Default.Wallpaper,null);Spacer(Modifier.width(8.dp));Text("Elegir fondo del teléfono")}}
   item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFF080808),Color(0xFF111827),Color(0xFF160B16),Color(0xFF050505)).forEach{c->Box(Modifier.size(38.dp).clip(CircleShape).background(c).clickable{vm.background=c})}}}
   item{Text("Transparencia de tarjetas")}
   item{Slider(vm.opacity,{vm.opacity=it},valueRange=.65f..1f)}
@@ -506,5 +511,18 @@ fun Artwork(t:Track,size:androidx.compose.ui.unit.Dp,vm:MusicViewModel){
  Box(Modifier.size(size).clip(RoundedCornerShape(24.dp)).background(Color(0xFF242424)),contentAlignment=Alignment.Center){
   bitmap?.let{androidx.compose.foundation.Image(it.asImageBitmap(),null,Modifier.fillMaxSize())}
    ?: Icon(Icons.Default.MusicNote,null,modifier=Modifier.size(size*.28f),tint=vm.accent)
+ }
+}
+
+
+@Composable
+fun WallpaperLayer(vm:MusicViewModel){
+ val uri=if(vm.dynamicWallpaper)vm.current?.artworkUri else vm.wallpaperUri
+ if(uri==null)return
+ val context=LocalContext.current
+ var bitmap by remember(uri){mutableStateOf<android.graphics.Bitmap?>(null)}
+ LaunchedEffect(uri){bitmap=runCatching{context.contentResolver.openInputStream(Uri.parse(uri)).use{android.graphics.BitmapFactory.decodeStream(it)}}.getOrNull()}
+ bitmap?.let{bmp->
+  androidx.compose.foundation.Image(bmp.asImageBitmap(),null,Modifier.fillMaxSize().alpha(.20f))
  }
 }
