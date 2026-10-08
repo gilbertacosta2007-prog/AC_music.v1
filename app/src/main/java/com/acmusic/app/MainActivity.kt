@@ -184,7 +184,35 @@ fun Nav(
 }
 @Composable fun Likes(vm:MusicViewModel){val l=vm.allTracks().filter{it.url in vm.likes};Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Me gusta",style=MaterialTheme.typography.displaySmall);if(l.isEmpty())Text("Todavía no hay canciones guardadas.",color=Color.Gray)else LazyColumn{items(l){TrackRow(it,vm)}}}}
 @Composable fun Playlists(vm:MusicViewModel){Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Playlists",style=MaterialTheme.typography.displaySmall);listOf("Favoritas","Flow nocturno","Entrenamiento").forEach{Card(Modifier.fillMaxWidth().padding(vertical=6.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF151515))){Text(it,Modifier.padding(20.dp))}}}}
-@Composable fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit){val context=LocalContext.current;LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Spacer(Modifier.height(20.dp));Text("Ajustes",style=MaterialTheme.typography.displaySmall);Text("Personalice AC Music.",color=Color.Gray)};item{Text("BIBLIOTECA LOCAL",color=Color.Gray)};item{Text(if(permissionGranted)"${vm.localTracks.size} canciones locales disponibles" else "Active el acceso para reproducir las canciones descargadas en el teléfono",color=Color.Gray)};item{Button(if(permissionGranted){ {vm.refreshLocal(context)} } else requestPermission,Modifier.fillMaxWidth()){Text(if(permissionGranted)"Actualizar biblioteca" else "Dar acceso a la música")}};item{Text("APARIENCIA",color=Color.Gray)};item{SwitchRow("Visualizador circular","Animación alrededor de la portada",vm.visualizer){vm.visualizer=it}};item{SwitchRow("Reproducción aleatoria","Mezclar la cola",vm.shuffle){vm.toggleShuffle()}};item{Text("Color de acento")};item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFFE53935),Color(0xFF7C4DFF),Color(0xFF00BFA5),Color(0xFFFF9800)).forEach{Box(Modifier.size(38.dp).clip(CircleShape).background(it).clickable{vm.accent=it})}}};item{Text("Normalización",Modifier.padding(12.dp))};item{Text("Ecualizador",Modifier.padding(12.dp))};item{Text("Caché persistente",Modifier.padding(12.dp))};item{Text("YOUTUBE MUSIC",color=Color.Gray)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(20.dp)){Column(Modifier.padding(18.dp)){Text("Fuente online oficial",style=MaterialTheme.typography.titleMedium);Text("Búsqueda y reproducción desde YouTube Music dentro de AC Music, sin extraer ni convertir su audio.",color=Color.Gray);Spacer(Modifier.height(10.dp));Button({vm.openYouTubeSearch("")},Modifier.fillMaxWidth()){Text("Abrir YouTube Music")}}}}}}
+@Composable
+fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit){
+ val context=LocalContext.current
+ LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  item{Spacer(Modifier.height(20.dp));Text("Ajustes",style=MaterialTheme.typography.displaySmall);Text("Personalice el reproductor a su gusto.",color=Color.Gray)}
+  item{Text("BIBLIOTECA LOCAL",color=Color.Gray)}
+  item{Text(if(permissionGranted) vm.localTracks.size.toString()+" canciones locales disponibles" else "Active el acceso para reproducir las canciones descargadas en el teléfono",color=Color.Gray)}
+  item{Button(if(permissionGranted){{vm.refreshLocal(context)}}else requestPermission,Modifier.fillMaxWidth()){Text(if(permissionGranted)"Actualizar biblioteca" else "Dar acceso a la música")}}
+  item{Text("APARIENCIA",color=Color.Gray)}
+  item{SwitchRow("Visualizador","Animación alrededor de la portada",vm.visualizer){vm.visualizer=it}}
+  item{Text("Intensidad del visualizador")}
+  item{Slider(vm.visualizerIntensity,{vm.visualizerIntensity=it},valueRange=0f..1f)}
+  item{Text("Velocidad")}
+  item{Slider(vm.visualizerSpeed,{vm.visualizerSpeed=it},valueRange=.2f..2f)}
+  item{Text("Estilo del visualizador")}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){VisualizerStyle.values().forEach{style->FilterChip(vm.visualizerStyle==style,{vm.visualizerStyle=style},label={Text(style.name.lowercase().replaceFirstChar{it.uppercase()})})}}}
+  item{SwitchRow("Reproducción aleatoria","Mezclar la cola",vm.shuffle){vm.toggleShuffle()}}
+  item{Text("Color de acento")}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFFE53935),Color(0xFF7C4DFF),Color(0xFF00BFA5),Color(0xFFFF9800),Color(0xFF42A5F5)).forEach{c->Box(Modifier.size(38.dp).clip(CircleShape).background(c).clickable{vm.accent=c})}}}
+  item{Text("Fondo")}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFF080808),Color(0xFF111827),Color(0xFF160B16),Color(0xFF050505)).forEach{c->Box(Modifier.size(38.dp).clip(CircleShape).background(c).clickable{vm.background=c})}}}
+  item{Text("Transparencia de tarjetas")}
+  item{Slider(vm.opacity,{vm.opacity=it},valueRange=.65f..1f)}
+  item{Text("AUDIO",color=Color.Gray)}
+  item{Card(colors=CardDefaults.cardColors(containerColor=vm.cardColor),shape=RoundedCornerShape(20.dp)){Column(Modifier.padding(18.dp)){Text("Normalización");Text("Mantenga el volumen más uniforme entre canciones.",color=Color.Gray);Spacer(Modifier.height(8.dp));Text("Ecualizador");Text("La integración avanzada del ecualizador se deja preparada para una futura versión.",color=Color.Gray)}}}
+  item{Text("YOUTUBE MUSIC",color=Color.Gray)}
+  item{Card(colors=CardDefaults.cardColors(containerColor=vm.cardColor),shape=RoundedCornerShape(20.dp)){Column(Modifier.padding(18.dp)){Text("Fuente online oficial",style=MaterialTheme.typography.titleMedium);Text("Busque y reproduzca música desde YouTube Music dentro de AC Music, sin extraer ni convertir su audio.",color=Color.Gray);Spacer(Modifier.height(10.dp));Button({vm.openYouTubeSearch("")},Modifier.fillMaxWidth()){Text("Abrir YouTube Music")}}}}
+ }
+}
 @Composable
 fun LocalLibraryCard(vm:MusicViewModel,granted:Boolean,request:()->Unit){val context=LocalContext.current
  Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){
