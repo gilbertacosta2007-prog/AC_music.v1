@@ -170,7 +170,7 @@ fun LocalLibraryCard(vm:MusicViewModel,granted:Boolean,request:()->Unit){val con
    }
    Spacer(Modifier.height(12.dp))
    if(!granted)Button(request,Modifier.fillMaxWidth()){Icon(Icons.Default.FolderOpen,null);Spacer(Modifier.width(8.dp));Text("Dar acceso a mi música")}
-   else OutlinedButton({vm.refreshLocal(LocalContext.current)},Modifier.fillMaxWidth()){Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(8.dp));Text("Actualizar biblioteca")}
+   else OutlinedButton({vm.refreshLocal(context)},Modifier.fillMaxWidth()){Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(8.dp));Text("Actualizar biblioteca")}
   }
  }
 }
