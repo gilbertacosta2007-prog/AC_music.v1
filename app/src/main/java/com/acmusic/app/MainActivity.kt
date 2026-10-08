@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +75,20 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
   }
  }
 }
-@Composable fun Nav(t:Tab,label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,vm:MusicViewModel){NavigationBarItem(selected=vm.tab==t,onClick={vm.tab=t},icon={Icon(icon,null)},label={Text(label)})}
+@Composable
+fun Nav(
+    t: Tab,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    vm: MusicViewModel
+) {
+    NavigationBarItem(
+        selected = vm.tab == t,
+        onClick = { vm.tab = t },
+        icon = { Icon(icon, contentDescription = null) },
+        label = { Text(label) }
+    )
+}
 
 @Composable fun Home(vm:MusicViewModel){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){item{Spacer(Modifier.height(16.dp));Text("AC",color=vm.accent);Text("Music",style=MaterialTheme.typography.displaySmall);Text("Su música. Su ritmo. Su DJ.",color=Color.Gray)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("DJ Flow",style=MaterialTheme.typography.titleLarge);Spacer(Modifier.height(8.dp));Text(vm.djMessage);Spacer(Modifier.height(12.dp));Button({vm.djOpen=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Call,null);Spacer(Modifier.width(8.dp));Text("Hablar con DJ Flow")}}}};item{Text("Para usted",style=MaterialTheme.typography.titleLarge)};items(vm.filtered()){TrackRow(it,vm)}}}
 @Composable fun TrackRow(t:Track,vm:MusicViewModel){Row(Modifier.fillMaxWidth().clickable{vm.play(t)}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF242424)),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=vm.accent)};Spacer(Modifier.width(14.dp));Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton({vm.like(t)}){Icon(if(t.title in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=if(t.title in vm.likes)vm.accent else Color.Gray)}}}
