@@ -395,11 +395,7 @@ fun Player(vm: MusicViewModel) {
             Text(t.artist, color = Color.Gray)
             Spacer(Modifier.height(30.dp))
 
-            LinearProgressIndicator(
-                progress = { if(vm.durationMs>0) (vm.positionMs.toFloat()/vm.durationMs.toFloat()).coerceIn(0f,1f) else 0f },
-                modifier = Modifier.fillMaxWidth(),
-                color = vm.accent
-            )
+            Slider(value = if(vm.durationMs>0) (vm.positionMs.toFloat()/vm.durationMs.toFloat()).coerceIn(0f,1f) else 0f, onValueChange = { if(vm.durationMs>0) vm.seekTo((it*vm.durationMs).toLong()) }, modifier = Modifier.fillMaxWidth())
 
             Row {
                 IconButton(onClick = vm::previous) {
