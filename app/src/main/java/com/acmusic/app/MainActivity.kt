@@ -356,86 +356,63 @@ fun Player(vm: MusicViewModel) {
 
 @Composable fun Lyrics(vm:MusicViewModel){Box(Modifier.fillMaxSize().background(Color(0xFF050505))){Column(Modifier.fillMaxSize().padding(22.dp)){IconButton({vm.lyricsOpen=false}){Icon(Icons.Default.Close,null)};Text("LETRAS",color=vm.accent);Spacer(Modifier.height(60.dp));listOf("Las luces se encienden","la noche empieza a respirar","déjame llevarte","un poco más allá","sin mirar atrás").forEachIndexed{i,s->Text(s,style=if(i==2)MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,color=if(i==2)Color.White else Color.White.copy(.35f),modifier=Modifier.padding(vertical=8.dp))}}}}
 @Composable
-fun DJ(vm: MusicViewModel) {
-    val transition = rememberInfiniteTransition(label = "dj")
-    val pulse by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 6.28f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "pulse"
-    )
-
-    Box(Modifier.fillMaxSize().background(Color(0xFF080808))) {
-        Column(Modifier.fillMaxSize().padding(22.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                IconButton(onClick = { vm.djOpen = false }) {
-                    Icon(Icons.Default.Close, contentDescription = "Cerrar")
-                }
-                Text("DJ FLOW", color = vm.accent)
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Más")
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            Canvas(
-                Modifier.size(170.dp).align(Alignment.CenterHorizontally)
-            ) {
-                val radius = size.minDimension * (0.36f + sin(pulse) * 0.04f)
-                drawCircle(vm.accent.copy(alpha = 0.12f), radius)
-                drawCircle(vm.accent, radius, style = Stroke(3.dp.toPx()))
-            }
-
-            Spacer(Modifier.height(20.dp))
-            Text(
-                "Estoy escuchando.",
-                Modifier.align(Alignment.CenterHorizontally),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(
-                "Hábleme como si fuera una llamada.",
-                Modifier.align(Alignment.CenterHorizontally),
-                color = Color.Gray
-            )
-
-            Spacer(Modifier.height(20.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))) {
-                Text(vm.djMessage, Modifier.padding(18.dp))
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            OutlinedTextField(
-                value = vm.djInput,
-                onValueChange = { vm.djInput = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Escriba qué quiere escuchar") },
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(onClick = vm::askDj) {
-                        Icon(Icons.Default.Send, contentDescription = "Enviar")
-                    }
-                }
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Button(
-                onClick = vm::askDj,
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Icon(Icons.Default.Mic, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Hablar con DJ Flow")
-            }
-        }
-    }
+fun DJ(vm:MusicViewModel,micGranted:Boolean,requestMic:()->Unit){
+ val context=LocalContext.current
+ var listening by remember{mutableStateOf(false)}
+ val tts=remember{TextToSpeech(context){}}
+ DisposableEffect(Unit){onDispose{tts.stop();tts.shutdown()}}
+ fun speak(text:String){tts.language=Locale("es","ES");tts.speak(text,TextToSpeech.QUEUE_FLUSH,null,"dj-flow")}
+ fun listen(){
+  if(!micGranted){requestMic();return}
+  if(!SpeechRecognizer.isRecognitionAvailable(context))return
+  val recognizer=SpeechRecognizer.createSpeechRecognizer(context)
+  recognizer.setRecognitionListener(object:RecognitionListener{
+   override fun onReadyForSpeech(params:Bundle?){listening=true}
+   override fun onBeginningOfSpeech(){}
+   override fun onRmsChanged(rmsdB:Float){}
+   override fun onBufferReceived(buffer:ByteArray?){}
+   override fun onEndOfSpeech(){listening=false}
+   override fun onError(error:Int){listening=false;recognizer.destroy()}
+   override fun onResults(results:Bundle?){
+    listening=false
+    val words=results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+    if(words.isNotBlank())speak(vm.askDj(words))
+    recognizer.destroy()
+   }
+   override fun onPartialResults(partialResults:Bundle?){}
+   override fun onEvent(eventType:Int,params:Bundle?){}
+  })
+  recognizer.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{
+   putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+   putExtra(RecognizerIntent.EXTRA_LANGUAGE,"es-ES")
+  })
+ }
+ Box(Modifier.fillMaxSize().background(Color(0xFF080808))){
+  Column(Modifier.fillMaxSize().padding(22.dp)){
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+    IconButton({vm.djOpen=false}){Icon(Icons.Default.Close,"Cerrar")}
+    Text("DJ FLOW",color=vm.accent)
+    IconButton({}){Icon(Icons.Default.MoreVert,"Más")}
+   }
+   Spacer(Modifier.height(20.dp))
+   Text("Mírame.",style=MaterialTheme.typography.displaySmall,modifier=Modifier.align(Alignment.CenterHorizontally))
+   Text(if(listening)"Estoy escuchando…" else "Hábleme como si fuera una llamada.",modifier=Modifier.align(Alignment.CenterHorizontally),color=Color.Gray)
+   Spacer(Modifier.height(20.dp))
+   Box(Modifier.size(190.dp).align(Alignment.CenterHorizontally),contentAlignment=Alignment.Center){
+    val tr=rememberInfiniteTransition(label="djvoice")
+    val p by tr.animateFloat(.82f,1.12f,infiniteRepeatable(tween(800),RepeatMode.Reverse),label="pulse")
+    Canvas(Modifier.fillMaxSize()){drawCircle(vm.accent.copy(alpha=.12f),size.minDimension*.42f*p);drawCircle(vm.accent,size.minDimension*.32f*p,style=Stroke(3.dp.toPx()))}
+    Icon(if(listening)Icons.Default.Stop else Icons.Default.Mic,null,tint=vm.accent,modifier=Modifier.size(56.dp))
+   }
+   Spacer(Modifier.height(20.dp))
+   Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Text(vm.djMessage,Modifier.padding(20.dp))}
+   Spacer(Modifier.weight(1f))
+   OutlinedTextField(vm.djInput,{vm.djInput=it},Modifier.fillMaxWidth(),placeholder={Text("También puede escribirle")},trailingIcon={IconButton({speak(vm.askDj())}){Icon(Icons.Default.Send,"Enviar")}},singleLine=true)
+   Spacer(Modifier.height(14.dp))
+   FilledIconButton({listen()},Modifier.size(78.dp).align(Alignment.CenterHorizontally),colors=IconButtonDefaults.filledIconButtonColors(containerColor=vm.accent)){Icon(if(listening)Icons.Default.Stop else Icons.Default.Mic,null,modifier=Modifier.size(34.dp))}
+  }
+ }
 }
-
 
 @Composable
 fun YouTubeMusic(vm:MusicViewModel){
