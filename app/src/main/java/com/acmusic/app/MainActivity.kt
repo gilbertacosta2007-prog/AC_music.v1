@@ -73,7 +73,7 @@ enum class VisualizerStyle{CIRCLE,BARS,WAVES,SPECTRUM}
 class MusicViewModel:ViewModel(){
  var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME);var searchSource by mutableStateOf(SearchSource.ALL)
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
- var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
+ var likes by mutableStateOf(setOf<String>());var playlists by mutableStateOf(mapOf<String,Set<String>>("Favoritas" to emptySet(),"Flow nocturno" to emptySet(),"Entrenamiento" to emptySet()));var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
  var wallpaperUri by mutableStateOf<String?>(null);var dynamicWallpaper by mutableStateOf(true);var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/");var background by mutableStateOf(Color(0xFF080808));var cardColor by mutableStateOf(Color(0xFF151515));var opacity by mutableFloatStateOf(1f);var visualizerStyle by mutableStateOf(VisualizerStyle.CIRCLE);var visualizerIntensity by mutableFloatStateOf(.65f);var visualizerSpeed by mutableFloatStateOf(1f)
  fun attach(p:ExoPlayer){
  player=p
@@ -95,6 +95,7 @@ class MusicViewModel:ViewModel(){
  fun play(t:Track){current=t;player?.setMediaItem(MediaItem.fromUri(t.url));player?.prepare();player?.play();playing=true}
  fun toggle(){player?.let{if(it.isPlaying){it.pause();playing=false}else{it.play();playing=true}}}
  fun like(t:Track){likes=if(t.url in likes)likes-t.url else likes+t.url}
+ fun addToPlaylist(name:String,t:Track){playlists=playlists.toMutableMap().apply{put(name,(get(name).orEmpty()+t.url).toSet())}}
  fun askDj(input:String=djInput):String{
   if(input.isBlank()) return djMessage
   val q=input.lowercase()
@@ -258,7 +259,16 @@ fun Nav(
  }
 }
 @Composable fun Likes(vm:MusicViewModel){val l=vm.allTracks().filter{it.url in vm.likes};Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Me gusta",style=MaterialTheme.typography.displaySmall);if(l.isEmpty())Text("Todavía no hay canciones guardadas.",color=Color.Gray)else LazyColumn{items(l){TrackRow(it,vm)}}}}
-@Composable fun Playlists(vm:MusicViewModel){Column(Modifier.fillMaxSize().padding(20.dp)){Spacer(Modifier.height(20.dp));Text("Playlists",style=MaterialTheme.typography.displaySmall);listOf("Favoritas","Flow nocturno","Entrenamiento").forEach{Card(Modifier.fillMaxWidth().padding(vertical=6.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF151515))){Text(it,Modifier.padding(20.dp))}}}}
+@Composable fun Playlists(vm:MusicViewModel){
+ LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+  item{Spacer(Modifier.height(20.dp));Text("Playlists",style=MaterialTheme.typography.displaySmall)}
+  vm.playlists.forEach{entry->
+   item{Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(20.dp)){
+    Column(Modifier.padding(18.dp)){Text(entry.key,style=MaterialTheme.typography.titleLarge);Text(entry.value.size.toString()+" canciones",color=Color.Gray);entry.value.mapNotNull{u->vm.allTracks().find{it.url==u}}.forEach{t->TrackRow(t,vm)}}
+   }}
+  }
+ }
+}
 @Composable
 fun Settings(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit,pickWallpaper:()->Unit){
  val context=LocalContext.current
