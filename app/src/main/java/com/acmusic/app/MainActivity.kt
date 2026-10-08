@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ACMusicApp(vm: MusicViewModel = viewModel()) {
     val context = LocalContext.current
@@ -165,7 +166,7 @@ private fun MiniPlayer(track: Track, onPlayPause: () -> Unit) {
                 Text(track.artist, style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = onPlayPause) {
-                Icon(Icons.Default.PlayPause, contentDescription = "Reproducir o pausar")
+                Icon(Icons.Default.PlayArrow, contentDescription = "Reproducir o pausar")
             }
         }
     }
