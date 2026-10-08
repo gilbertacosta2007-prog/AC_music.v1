@@ -397,3 +397,30 @@ fun DJ(vm: MusicViewModel) {
         }
     }
 }
+
+
+@Composable
+fun YouTubeMusic(vm:MusicViewModel){
+ Box(Modifier.fillMaxSize().background(Color.Black)){
+  AndroidView(
+   modifier=Modifier.fillMaxSize(),
+   factory={context->
+    WebView(context).apply{
+     layoutParams=ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT)
+     webViewClient=WebViewClient()
+     settings.javaScriptEnabled=true
+     settings.domStorageEnabled=true
+     settings.mediaPlaybackRequiresUserGesture=false
+     loadUrl(vm.youtubeUrl)
+    }
+   },
+   update={web->if(web.url!=vm.youtubeUrl)web.loadUrl(vm.youtubeUrl)}
+  )
+  Surface(Modifier.align(Alignment.TopCenter).padding(10.dp),color=Color.Black.copy(alpha=.72f),shape=RoundedCornerShape(18.dp)){
+   Row(verticalAlignment=Alignment.CenterVertically){
+    IconButton({vm.youtubeOpen=false}){Icon(Icons.Default.Close,"Cerrar",tint=Color.White)}
+    Text("YouTube Music",color=Color.White)
+   }
+  }
+ }
+}
