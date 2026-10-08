@@ -60,12 +60,13 @@ private val demo=listOf(
  Track("Midnight City","AC Music Demo","https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"))
 enum class Tab{HOME,SEARCH,LIKES,PLAYLISTS,SETTINGS}
 enum class SearchSource{ALL,PHONE,YOUTUBE}
+enum class VisualizerStyle{CIRCLE,BARS,WAVES,SPECTRUM}
 
 class MusicViewModel:ViewModel(){
  var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME);var searchSource by mutableStateOf(SearchSource.ALL)
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
  var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
- var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/")
+ var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/");var background by mutableStateOf(Color(0xFF080808));var cardColor by mutableStateOf(Color(0xFF151515));var opacity by mutableFloatStateOf(1f);var visualizerStyle by mutableStateOf(VisualizerStyle.CIRCLE);var visualizerIntensity by mutableFloatStateOf(.65f);var visualizerSpeed by mutableFloatStateOf(1f)
  fun attach(p:ExoPlayer){player=p;p.repeatMode=repeatMode;p.shuffleModeEnabled=shuffle}
  fun refreshLocal(context:Context){viewModelScope.launch(Dispatchers.IO){localTracks=runCatching{LocalAudioRepository.load(context)}.getOrDefault(emptyList())}}
  fun updateProgress(){player?.let{positionMs=it.currentPosition.coerceAtLeast(0L);durationMs=it.duration.takeIf{d->d>0}?:0L;playing=it.isPlaying}}
