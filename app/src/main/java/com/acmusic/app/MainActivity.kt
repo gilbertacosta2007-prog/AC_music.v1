@@ -75,7 +75,15 @@ class MusicViewModel:ViewModel(){
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
  var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
  var wallpaperUri by mutableStateOf<String?>(null);var dynamicWallpaper by mutableStateOf(true);var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/");var background by mutableStateOf(Color(0xFF080808));var cardColor by mutableStateOf(Color(0xFF151515));var opacity by mutableFloatStateOf(1f);var visualizerStyle by mutableStateOf(VisualizerStyle.CIRCLE);var visualizerIntensity by mutableFloatStateOf(.65f);var visualizerSpeed by mutableFloatStateOf(1f)
- fun attach(p:ExoPlayer){player=p;p.repeatMode=repeatMode;p.shuffleModeEnabled=shuffle}
+ fun attach(p:ExoPlayer){
+ player=p
+ p.repeatMode=repeatMode
+ p.shuffleModeEnabled=shuffle
+ p.addListener(object:Player.Listener{
+  override fun onIsPlayingChanged(isPlaying:Boolean){playing=isPlaying}
+  override fun onPlaybackStateChanged(state:Int){if(state==Player.STATE_ENDED && repeatMode==Player.REPEAT_MODE_OFF)next()}
+ })
+}
  fun refreshLocal(context:Context){viewModelScope.launch(Dispatchers.IO){localTracks=runCatching{LocalAudioRepository.load(context)}.getOrDefault(emptyList())}}
  fun updateProgress(){player?.let{positionMs=it.currentPosition.coerceAtLeast(0L);durationMs=it.duration.takeIf{d->d>0}?:0L;playing=it.isPlaying}}
  fun next(){val list=allTracks();if(list.isEmpty())return;val currentIndex=list.indexOfFirst{it.url==current?.url};val target=if(shuffle)list.random() else list[(currentIndex+1).mod(list.size)];if(repeatMode==Player.REPEAT_MODE_ONE){player?.seekTo(0);player?.play();return};play(target)}
@@ -160,11 +168,10 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
  var micGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(ctx,micPermission)==PackageManager.PERMISSION_GRANTED)}
  val micLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micGranted=granted}
  val wallpaperLauncher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null){ctx.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);vm.wallpaperUri=uri.toString();vm.dynamicWallpaper=false}}
- LaunchedEffect(Unit){
-  repeat(40){
-   PlaybackService.player?.let{vm.attach(it);return@LaunchedEffect}
-   delay(100)
-  }
+ val exoPlayer = remember { ExoPlayer.Builder(ctx).build() }
+ DisposableEffect(exoPlayer) {
+  vm.attach(exoPlayer)
+  onDispose { exoPlayer.release() }
  }
  LaunchedEffect(permissionGranted){if(permissionGranted)vm.refreshLocal(ctx)}
  LaunchedEffect(vm.playing){
@@ -231,7 +238,7 @@ fun Nav(
 }
 
 @Composable fun Home(vm:MusicViewModel,permissionGranted:Boolean,requestPermission:()->Unit){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){item{Spacer(Modifier.height(16.dp));Text("AC",color=vm.accent);Text("Music",style=MaterialTheme.typography.displaySmall);Text("Su música. Su ritmo. Su DJ.",color=Color.Gray)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("DJ Flow",style=MaterialTheme.typography.titleLarge);Spacer(Modifier.height(8.dp));Text(vm.djMessage);Spacer(Modifier.height(12.dp));Button({vm.djOpen=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Call,null);Spacer(Modifier.width(8.dp));Text("Hablar con DJ Flow")}}}};item{LocalLibraryCard(vm,permissionGranted,requestPermission)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("YouTube Music",style=MaterialTheme.typography.titleLarge);Text("Busque y reproduzca música desde YouTube Music dentro de AC Music.",color=Color.Gray);Spacer(Modifier.height(12.dp));Button({vm.openYouTubeSearch("")},Modifier.fillMaxWidth()){Icon(Icons.Default.Language,null);Spacer(Modifier.width(8.dp));Text("Abrir YouTube Music")}}}};item{Text("Para usted",style=MaterialTheme.typography.titleLarge)};items(vm.filtered()){TrackRow(it,vm)}}}
-@Composable fun TrackRow(t:Track,vm:MusicViewModel){Row(Modifier.fillMaxWidth().clickable{vm.play(t)}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Artwork(t,56.dp,vm);Spacer(Modifier.width(14.dp));Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton({vm.like(t)}){Icon(if(t.title in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=if(t.title in vm.likes)vm.accent else Color.Gray)}}}
+@Composable fun TrackRow(t:Track,vm:MusicViewModel){Row(Modifier.fillMaxWidth().clickable{vm.play(t)}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Artwork(t,56.dp,vm);Spacer(Modifier.width(14.dp));Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton({vm.like(t)}){Icon(if(t.url in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=if(t.url in vm.likes)vm.accent else Color.Gray)}}}
 @Composable fun Search(vm:MusicViewModel){
  Column(Modifier.fillMaxSize().padding(20.dp)){
   Spacer(Modifier.height(20.dp));Text("Buscar",style=MaterialTheme.typography.displaySmall);Text("Teléfono y YouTube Music",color=Color.Gray);Spacer(Modifier.height(12.dp))
@@ -402,7 +409,7 @@ fun Player(vm: MusicViewModel) {
 
             Row {
                 IconButton(onClick = { vm.like(t) }) {
-                    Icon(Icons.Default.FavoriteBorder, contentDescription = "Me gusta")
+                    Icon(if(t.url in vm.likes)Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Me gusta")
                 }
                 IconButton(onClick = { vm.lyricsOpen = true }) {
                     Icon(Icons.Default.Lyrics, contentDescription = "Letras")
