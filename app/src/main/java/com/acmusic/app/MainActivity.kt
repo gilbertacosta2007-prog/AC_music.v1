@@ -83,7 +83,7 @@ fun Nav(
 ) {
     Column(
         modifier = Modifier
-            .weight(1f)
+            .width(72.dp)
             .clickable { vm.tab = t }
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
