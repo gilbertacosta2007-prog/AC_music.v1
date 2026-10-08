@@ -59,9 +59,10 @@ private val demo=listOf(
  Track("Afterglow","AC Music Demo","https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"),
  Track("Midnight City","AC Music Demo","https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"))
 enum class Tab{HOME,SEARCH,LIKES,PLAYLISTS,SETTINGS}
+enum class SearchSource{ALL,PHONE,YOUTUBE}
 
 class MusicViewModel:ViewModel(){
- var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME)
+ var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME);var searchSource by mutableStateOf(SearchSource.ALL)
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
  var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
  var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/")
