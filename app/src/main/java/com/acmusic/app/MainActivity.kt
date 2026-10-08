@@ -86,8 +86,61 @@ class MusicViewModel:ViewModel(){
  fun play(t:Track){current=t;player?.setMediaItem(MediaItem.fromUri(t.url));player?.prepare();player?.play();playing=true}
  fun toggle(){player?.let{if(it.isPlaying){it.pause();playing=false}else{it.play();playing=true}}}
  fun like(t:Track){likes=if(t.url in likes)likes-t.url else likes+t.url}
- fun askDj(input:String=djInput):String{if(input.isBlank())return djMessage;val q=input.lowercase();val t=when{q.contains("energ")||q.contains("gym")||q.contains("fiesta")->demo[2];q.contains("relax")||q.contains("calma")->demo[0];else->demo.random()};djMessage=if(q.contains("sugarland"))"Oh. Mírame, esto sí está mejor que la música aburrida de Sugarland. Vamos con ${t.title}." else if(t.isLocal) "Oh. Encontré esa canción en su teléfono. Puse ${t.title}. Diablazo." else "Ok. Ese mood está claro. Puse ${t.title}. Diablazo.";play(t);djInput="";return djMessage}
- fun filtered():List<Track>{val base=when(searchSource){SearchSource.ALL->allTracks();SearchSource.PHONE->localTracks;SearchSource.YOUTUBE->emptyList()};return if(search.isBlank())base else base.filter{it.title.contains(search,true)||it.artist.contains(search,true)}}
+ fun askDj(input:String=djInput):String{
+  if(input.isBlank()) return djMessage
+  val q=input.lowercase()
+  if(q.contains("pausa") || q=="para"){
+   player?.pause()
+   playing=false
+   djMessage="Ok. Pausamos. Mírame."
+   djInput=""
+   return djMessage
+  }
+  if(q.contains("siguiente") || q.contains("skip")){
+   next()
+   djMessage="Diablazo. Siguiente."
+   djInput=""
+   return djMessage
+  }
+  if(q.contains("anterior")){
+   previous()
+   djMessage="Volvemos. Ok."
+   djInput=""
+   return djMessage
+  }
+  if(q.contains("me gusta")){
+   current?.let{like(it)}
+   djMessage="Listo. Esa quedó en Me gusta."
+   djInput=""
+   return djMessage
+  }
+  if(q.contains("youtube")){
+   openYouTubeSearch(q.removePrefix("youtube").trim())
+   djMessage="Oh. Vamos a buscarlo en YouTube Music."
+   djInput=""
+   return djMessage
+  }
+  val target=when{
+   q.contains("energ") || q.contains("gym") || q.contains("fiesta") -> demo[2]
+   q.contains("relax") || q.contains("calma") -> demo[0]
+   localTracks.isNotEmpty() && (q.contains("local") || q.contains("teléfono") || q.contains("telefono")) -> localTracks.first()
+   else -> allTracks().randomOrNull()
+  }
+  if(target==null){
+   djMessage="Mírame. Todavía no tengo una canción que coincida."
+   djInput=""
+   return djMessage
+  }
+  play(target)
+  djMessage=if(q.contains("sugarland")){
+   "Oh. Mírame, esto sí está mejor que la música aburrida de Sugarland. Vamos con "+target.title+"."
+  }else{
+   "Ok. Ese mood está claro. Puse "+target.title+". Diablazo."
+  }
+  djInput=""
+  return djMessage
+}
+fun filtered():List<Track>{val base=when(searchSource){SearchSource.ALL->allTracks();SearchSource.PHONE->localTracks;SearchSource.YOUTUBE->emptyList()};return if(search.isBlank())base else base.filter{it.title.contains(search,true)||it.artist.contains(search,true)}}
  fun openYouTubeSearch(query:String){val q=query.ifBlank{"música"};youtubeUrl="https://music.youtube.com/search?q="+Uri.encode(q);youtubeOpen=true}
 }
 
