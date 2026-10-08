@@ -107,8 +107,7 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
    delay(500)
   }
  }
- MaterialTheme(colorScheme=darkColorScheme(primary=vm.accent,background=Color(0xFF080808),surface=Color(0xFF151515))){
-  Box(Modifier.fillMaxSize().background(Color(0xFF080808))){
+ MaterialTheme(colorScheme=darkColorScheme(primary=vm.accent,background=vm.background,surface=vm.cardColor)){\n  Box(Modifier.fillMaxSize().background(vm.background)){
    Column(Modifier.fillMaxSize()){
     when(vm.tab){
      Tab.HOME->Home(vm,permissionGranted){permissionLauncher.launch(permissionName)}
