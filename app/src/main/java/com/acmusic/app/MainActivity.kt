@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,12 +81,24 @@ fun Nav(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     vm: MusicViewModel
 ) {
-    NavigationBarItem(
-        selected = vm.tab == t,
-        onClick = { vm.tab = t },
-        icon = { Icon(icon, contentDescription = null) },
-        label = { Text(label) }
-    )
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clickable { vm.tab = t }
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (vm.tab == t) vm.accent else Color.Gray
+        )
+        Text(
+            text = label,
+            color = if (vm.tab == t) vm.accent else Color.Gray,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
 }
 
 @Composable fun Home(vm:MusicViewModel){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){item{Spacer(Modifier.height(16.dp));Text("AC",color=vm.accent);Text("Music",style=MaterialTheme.typography.displaySmall);Text("Su música. Su ritmo. Su DJ.",color=Color.Gray)};item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515)),shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp)){Text("DJ Flow",style=MaterialTheme.typography.titleLarge);Spacer(Modifier.height(8.dp));Text(vm.djMessage);Spacer(Modifier.height(12.dp));Button({vm.djOpen=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Call,null);Spacer(Modifier.width(8.dp));Text("Hablar con DJ Flow")}}}};item{Text("Para usted",style=MaterialTheme.typography.titleLarge)};items(vm.filtered()){TrackRow(it,vm)}}}
