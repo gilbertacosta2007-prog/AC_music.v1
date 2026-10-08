@@ -3,6 +3,11 @@ package com.acmusic.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -79,6 +84,199 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
 @Composable fun Settings(vm:MusicViewModel){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Spacer(Modifier.height(20.dp));Text("Ajustes",style=MaterialTheme.typography.displaySmall);Text("Personalice AC Music.",color=Color.Gray)};item{Text("APARIENCIA",color=Color.Gray)};item{SwitchRow("Visualizador circular","Animación alrededor de la portada",vm.visualizer){vm.visualizer=it}};item{Text("Color de acento")};item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){listOf(Color(0xFFE53935),Color(0xFF7C4DFF),Color(0xFF00BFA5),Color(0xFFFF9800)).forEach{Box(Modifier.size(38.dp).clip(CircleShape).background(it).clickable{vm.accent=it})}}};item{Text("Normalización",Modifier.padding(12.dp))};item{Text("Ecualizador",Modifier.padding(12.dp))};item{Text("Caché persistente",Modifier.padding(12.dp))};item{Text("YouTube Music — fuente pendiente de integración",Modifier.padding(12.dp),color=Color.Gray)}}}
 @Composable fun SwitchRow(a:String,b:String,v:Boolean,on:(Boolean)->Unit){Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(a);Text(b,color=Color.Gray)};Switch(checked=v,onCheckedChange=on)}}
 @Composable fun Mini(t:Track,vm:MusicViewModel){Surface(color=Color(0xFF161616)){Row(Modifier.fillMaxWidth().clickable{vm.playerOpen=true}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(t.title);Text(t.artist,color=Color.Gray)};IconButton(vm::toggle){Icon(if(vm.playing)Icons.Default.Pause else Icons.Default.PlayArrow,null)}}}}
-@Composable fun Player(vm:MusicViewModel){val t=vm.current?:return;val tr=rememberInfiniteTransition(label="visualizer");val phase by tr.animateFloat(0f,6.28f,infiniteRepeatable(tween(1300),RepeatMode.Restart),label="phase");Box(Modifier.fillMaxSize().background(Color(0xFF090909))){Column(Modifier.fillMaxSize().padding(22.dp),horizontalAlignment=Alignment.CenterHorizontally){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton({vm.playerOpen=false}){Icon(Icons.Default.KeyboardArrowDown,null)};Text("REPRODUCIENDO");IconButton({vm.lyricsOpen=true}){Icon(Icons.Default.Lyrics,null)}};Spacer(Modifier.height(28.dp));Box(Modifier.size(300.dp),contentAlignment=Alignment.Center){if(vm.visualizer)Canvas(Modifier.fillMaxSize()){val r=size.minDimension/2-12.dp.toPx();for(i in 0 until 48){val a=i/48f*6.28f;val w=(sin(phase+i*.4f)+1f)/2f;drawLine(vm.accent,center+androidx.compose.ui.geometry.Offset(cos(a)*r,sin(a)*r),center+androidx.compose.ui.geometry.Offset(cos(a)*(r+w*22),sin(a)*(r+w*22)),2.5f,StrokeCap.Round)}};Box(Modifier.size(244.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFF242424)),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,Modifier.size(72.dp),tint=vm.accent)}};Spacer(Modifier.height(24.dp));Text(t.title,style=MaterialTheme.typography.headlineSmall);Text(t.artist,color=Color.Gray);Spacer(Modifier.height(30.dp));LinearProgressIndicator(progress={.42f},Modifier.fillMaxWidth(),color=vm.accent);Row{IconButton({}){Icon(Icons.Default.SkipPrevious,null)};IconButton(vm::toggle){Icon(if(vm.playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,Modifier.size(38.dp))};IconButton({}){Icon(Icons.Default.SkipNext,null)}};Row{IconButton({vm.like(t)}){Icon(Icons.Default.FavoriteBorder,null)};IconButton({vm.lyricsOpen=true}){Icon(Icons.Default.Lyrics,null)};IconButton({}){Icon(Icons.Default.QueueMusic,null)}}}}}}
+@Composable
+fun Player(vm: MusicViewModel) {
+    val t = vm.current ?: return
+    val transition = rememberInfiniteTransition(label = "visualizer")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1300),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "phase"
+    )
+
+    Box(Modifier.fillMaxSize().background(Color(0xFF090909))) {
+        Column(
+            Modifier.fillMaxSize().padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                IconButton(onClick = { vm.playerOpen = false }) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Cerrar")
+                }
+                Text("REPRODUCIENDO")
+                IconButton(onClick = { vm.lyricsOpen = true }) {
+                    Icon(Icons.Default.Lyrics, contentDescription = "Letras")
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
+                if (vm.visualizer) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val radius = size.minDimension / 2f - 12.dp.toPx()
+                        for (i in 0 until 48) {
+                            val angle = i.toFloat() / 48f * 6.28f
+                            val wave = (sin(phase + i * 0.4f) + 1f) / 2f
+                            val cs = cos(angle.toDouble()).toFloat()
+                            val sn = sin(angle.toDouble()).toFloat()
+                            val endRadius = radius + wave * 22f
+                            drawLine(
+                                color = vm.accent,
+                                start = androidx.compose.ui.geometry.Offset(
+                                    center.x + cs * radius,
+                                    center.y + sn * radius
+                                ),
+                                end = androidx.compose.ui.geometry.Offset(
+                                    center.x + cs * endRadius,
+                                    center.y + sn * endRadius
+                                ),
+                                strokeWidth = 2.5f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
+                }
+
+                Box(
+                    Modifier.size(244.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFF242424)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp),
+                        tint = vm.accent
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Text(t.title, style = MaterialTheme.typography.headlineSmall)
+            Text(t.artist, color = Color.Gray)
+            Spacer(Modifier.height(30.dp))
+
+            LinearProgressIndicator(
+                progress = { 0.42f },
+                modifier = Modifier.fillMaxWidth(),
+                color = vm.accent
+            )
+
+            Row {
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior")
+                }
+                IconButton(onClick = vm::toggle) {
+                    Icon(
+                        if (vm.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Reproducir",
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Siguiente")
+                }
+            }
+
+            Row {
+                IconButton(onClick = { vm.like(t) }) {
+                    Icon(Icons.Default.FavoriteBorder, contentDescription = "Me gusta")
+                }
+                IconButton(onClick = { vm.lyricsOpen = true }) {
+                    Icon(Icons.Default.Lyrics, contentDescription = "Letras")
+                }
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.QueueMusic, contentDescription = "Cola")
+                }
+            }
+        }
+    }
+}
+
 @Composable fun Lyrics(vm:MusicViewModel){Box(Modifier.fillMaxSize().background(Color(0xFF050505))){Column(Modifier.fillMaxSize().padding(22.dp)){IconButton({vm.lyricsOpen=false}){Icon(Icons.Default.Close,null)};Text("LETRAS",color=vm.accent);Spacer(Modifier.height(60.dp));listOf("Las luces se encienden","la noche empieza a respirar","déjame llevarte","un poco más allá","sin mirar atrás").forEachIndexed{i,s->Text(s,style=if(i==2)MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,color=if(i==2)Color.White else Color.White.copy(.35f),modifier=Modifier.padding(vertical=8.dp))}}}}
-@Composable fun DJ(vm:MusicViewModel){val tr=rememberInfiniteTransition(label="dj");val p by tr.animateFloat(0f,6.28f,infiniteRepeatable(tween(1200),RepeatMode.Restart),label="pulse");Box(Modifier.fillMaxSize().background(Color(0xFF080808))){Column(Modifier.fillMaxSize().padding(22.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton({vm.djOpen=false}){Icon(Icons.Default.Close,null)};Text("DJ FLOW",color=vm.accent);IconButton({}){Icon(Icons.Default.MoreVert,null)}};Spacer(Modifier.height(20.dp));Canvas(Modifier.size(170.dp).align(Alignment.CenterHorizontally)){val r=size.minDimension*(.36f+sin(p)*.04f);drawCircle(vm.accent.copy(alpha=.12f),r);drawCircle(vm.accent,r,style=Stroke(3.dp.toPx()))};Spacer(Modifier.height(20.dp));Text("Estoy escuchando.",Modifier.align(Alignment.CenterHorizontally),style=MaterialTheme.typography.headlineSmall);Text("Hábleme como si fuera una llamada.",Modifier.align(Alignment.CenterHorizontally),color=Color.Gray);Spacer(Modifier.height(20.dp));Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF151515))){Text(vm.djMessage,Modifier.padding(18.dp))};Spacer(Modifier.weight(1f));OutlinedTextField(vm.djInput,{vm.djInput=it},Modifier.fillMaxWidth(),placeholder={Text("Escriba qué quiere escuchar")},singleLine=true,trailingIcon={IconButton(vm::askDj){Icon(Icons.Default.Send,null)}});Spacer(Modifier.height(12.dp));Button(vm::askDj,Modifier.fillMaxWidth().height(56.dp)){Icon(Icons.Default.Mic,null);Spacer(Modifier.width(8.dp));Text("Hablar con DJ Flow")}}}}
+@Composable
+fun DJ(vm: MusicViewModel) {
+    val transition = rememberInfiniteTransition(label = "dj")
+    val pulse by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse"
+    )
+
+    Box(Modifier.fillMaxSize().background(Color(0xFF080808))) {
+        Column(Modifier.fillMaxSize().padding(22.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                IconButton(onClick = { vm.djOpen = false }) {
+                    Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                }
+                Text("DJ FLOW", color = vm.accent)
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Más")
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Canvas(
+                Modifier.size(170.dp).align(Alignment.CenterHorizontally)
+            ) {
+                val radius = size.minDimension * (0.36f + sin(pulse) * 0.04f)
+                drawCircle(vm.accent.copy(alpha = 0.12f), radius)
+                drawCircle(vm.accent, radius, style = Stroke(3.dp.toPx()))
+            }
+
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "Estoy escuchando.",
+                Modifier.align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                "Hábleme como si fuera una llamada.",
+                Modifier.align(Alignment.CenterHorizontally),
+                color = Color.Gray
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))) {
+                Text(vm.djMessage, Modifier.padding(18.dp))
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            OutlinedTextField(
+                value = vm.djInput,
+                onValueChange = { vm.djInput = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Escriba qué quiere escuchar") },
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = vm::askDj) {
+                        Icon(Icons.Default.Send, contentDescription = "Enviar")
+                    }
+                }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = vm::askDj,
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                Icon(Icons.Default.Mic, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Hablar con DJ Flow")
+            }
+        }
+    }
+}
