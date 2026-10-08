@@ -104,10 +104,11 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
  val micPermission=Manifest.permission.RECORD_AUDIO
  var micGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(ctx,micPermission)==PackageManager.PERMISSION_GRANTED)}
  val micLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micGranted=granted}
- DisposableEffect(Unit){
-  val p=ExoPlayer.Builder(ctx).build()
-  vm.attach(p)
-  onDispose{p.release()}
+ LaunchedEffect(Unit){
+  repeat(40){
+   PlaybackService.player?.let{vm.attach(it);return@LaunchedEffect}
+   delay(100)
+  }
  }
  LaunchedEffect(permissionGranted){if(permissionGranted)vm.refreshLocal(ctx)}
  LaunchedEffect(vm.playing){
