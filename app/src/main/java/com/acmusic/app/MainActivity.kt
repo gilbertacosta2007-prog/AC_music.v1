@@ -9,6 +9,11 @@ import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -96,6 +101,9 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
   permissionGranted=granted
   if(granted)vm.refreshLocal(ctx)
  }
+ val micPermission=Manifest.permission.RECORD_AUDIO
+ var micGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(ctx,micPermission)==PackageManager.PERMISSION_GRANTED)}
+ val micLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micGranted=granted}
  DisposableEffect(Unit){
   val p=ExoPlayer.Builder(ctx).build()
   vm.attach(p)
@@ -129,7 +137,7 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
    }
    FloatingActionButton({vm.djOpen=true},Modifier.align(Alignment.BottomEnd).padding(18.dp).padding(bottom=70.dp),containerColor=vm.accent){Icon(Icons.Default.Mic,"DJ Flow")}
    if(vm.playerOpen)Player(vm)
-   if(vm.djOpen)DJ(vm)
+   if(vm.djOpen)DJ(vm,micGranted){micLauncher.launch(micPermission)}
    if(vm.lyricsOpen)Lyrics(vm)
    if(vm.youtubeOpen)YouTubeMusic(vm)
   }
