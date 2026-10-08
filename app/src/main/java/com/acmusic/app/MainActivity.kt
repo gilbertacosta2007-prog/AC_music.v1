@@ -280,13 +280,13 @@ fun Player(vm: MusicViewModel) {
             Spacer(Modifier.height(30.dp))
 
             LinearProgressIndicator(
-                progress = { 0.42f },
+                progress = { if(vm.durationMs>0) (vm.positionMs.toFloat()/vm.durationMs.toFloat()).coerceIn(0f,1f) else 0f },
                 modifier = Modifier.fillMaxWidth(),
                 color = vm.accent
             )
 
             Row {
-                IconButton(onClick = {}) {
+                IconButton(onClick = vm::previous) {
                     Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior")
                 }
                 IconButton(onClick = vm::toggle) {
@@ -296,7 +296,7 @@ fun Player(vm: MusicViewModel) {
                         modifier = Modifier.size(38.dp)
                     )
                 }
-                IconButton(onClick = {}) {
+                IconButton(onClick = vm::next) {
                     Icon(Icons.Default.SkipNext, contentDescription = "Siguiente")
                 }
             }
