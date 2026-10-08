@@ -5,6 +5,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
+import android.view.ViewGroup
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,7 +64,7 @@ class MusicViewModel:ViewModel(){
  var current by mutableStateOf<Track?>(null);var playing by mutableStateOf(false);var tab by mutableStateOf(Tab.HOME)
  var search by mutableStateOf("");var djInput by mutableStateOf("");var djMessage by mutableStateOf("Mírame. Dígame qué quiere escuchar.")
  var likes by mutableStateOf(setOf<String>());var localTracks by mutableStateOf<List<Track>>(emptyList());var positionMs by mutableStateOf(0L);var durationMs by mutableStateOf(0L);var shuffle by mutableStateOf(false);var repeatMode by mutableIntStateOf(Player.REPEAT_MODE_OFF);var accent by mutableStateOf(Color(0xFFE53935));var visualizer by mutableStateOf(true)
- var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false)
+ var player:ExoPlayer?=null;var playerOpen by mutableStateOf(false);var djOpen by mutableStateOf(false);var lyricsOpen by mutableStateOf(false);var youtubeOpen by mutableStateOf(false);var youtubeUrl by mutableStateOf("https://music.youtube.com/")
  fun attach(p:ExoPlayer){player=p;p.repeatMode=repeatMode;p.shuffleModeEnabled=shuffle}
  fun refreshLocal(context:Context){viewModelScope.launch(Dispatchers.IO){localTracks=runCatching{LocalAudioRepository.load(context)}.getOrDefault(emptyList())}}
  fun updateProgress(){player?.let{positionMs=it.currentPosition.coerceAtLeast(0L);durationMs=it.duration.takeIf{d->d>0}?:0L;playing=it.isPlaying}}
@@ -74,6 +79,7 @@ class MusicViewModel:ViewModel(){
  fun like(t:Track){likes=if(t.url in likes)likes-t.url else likes+t.url}
  fun askDj(){if(djInput.isBlank())return;val q=djInput.lowercase();val t=when{q.contains("energ")||q.contains("gym")||q.contains("fiesta")->demo[2];q.contains("relax")||q.contains("calma")->demo[0];else->demo.random()};djMessage=if(q.contains("sugarland"))"Oh. Mírame, esto sí está mejor que la música aburrida de Sugarland. Vamos con ${t.title}." else if(t.isLocal) "Oh. Encontré esa canción en su teléfono. Puse ${t.title}. Diablazo." else "Ok. Ese mood está claro. Puse ${t.title}. Diablazo.";play(t);djInput=""}
  fun filtered()=if(search.isBlank())allTracks() else allTracks().filter{it.title.contains(search,true)||it.artist.contains(search,true)}
+ fun openYouTubeSearch(query:String){val q=query.ifBlank{"música"};youtubeUrl="https://music.youtube.com/search?q="+Uri.encode(q);youtubeOpen=true}
 }
 
 class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.onCreate(b);setContent{ACMusic()}}}
@@ -122,6 +128,7 @@ fun ACMusic(vm:MusicViewModel=viewModel()){
    if(vm.playerOpen)Player(vm)
    if(vm.djOpen)DJ(vm)
    if(vm.lyricsOpen)Lyrics(vm)
+   if(vm.youtubeOpen)YouTubeMusic(vm)
   }
  }
 }
